@@ -74,7 +74,7 @@ update() {
 
 # run forever maintaining IP sets
 
-while [ 1 = 1 ]; do
+while true; do
 	update
 
 	# repeat every 4 hours or so
