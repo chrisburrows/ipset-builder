@@ -1,0 +1,82 @@
+#!/bin/bash
+
+TMP_SUFFIX="_"
+
+# lookup domain name and return an array of IP addresses
+lookup_ip4() {
+	local out=$(dig -4 $1 | grep -v "^;" | egrep 'IN[[:space:]]+A' | awk '{print $5}')
+	echo ${out}
+}
+
+# create an ip hash set
+create_set() {
+	local name="$1"
+
+	ipset create "${name}" hash:ip family inet hashsize 256 maxelem 256
+}
+
+# add IPs to a set
+add_to_set() {
+	local name=$1
+	shift
+	for ip in $*
+	do
+		ipset -! add ${name} $ip
+	done
+}
+
+replace() {
+	local name=$1
+	local dns=$2
+
+	local tmp_set="${name}${TMP_SUFFIX}"
+	ipset list "${tmp_set}" > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		flush "${tmp_set}"
+	else
+		create_set "${tmp_set}"
+	fi
+
+	local iplist=$(lookup_ip4 ${dns})
+
+	# only create a new set and swap if DNS found some results
+	if [ "${#iplist}" -ge 7 ]; then
+		add_to_set "${tmp_set}" ${iplist}
+		swap "${name}"
+	fi
+}
+
+swap() {
+	local name=$1
+	local tmp_set="${name}${TMP_SUFFIX}"
+
+	ipset swap ${name} ${tmp_set}
+}
+
+flush() {
+	local name="$1"
+
+	ipset flush "${name}"
+}
+
+
+update() {
+	# MEROSS
+	replace meross mqtt-eu-3.meross.com.
+
+	# Google DNS
+	replace google-dns dns.google.
+
+
+	# Save Sets
+	ipset save > /etc/iptables/ipsets
+}
+
+# run forever maintaining IP sets
+
+while [ 1 = 1 ]; do
+	update
+
+	# repeat every 4 hours or so
+	sleep 14400
+done

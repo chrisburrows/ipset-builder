@@ -1,0 +1,16 @@
+[Unit]
+Description=IPset Maintainer
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=root
+EnvironmentFile=/usr/local/etc/ipset-builder.env
+ExecStart=/usr/local/bin/ipset-builder
+
+[Install]
+WantedBy=multi-user.target
+
