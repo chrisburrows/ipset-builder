@@ -26,26 +26,33 @@ add_to_set() {
 }
 
 replace() {
-	local name=$1
-	local dns=$2
+        local name=$1
+        shift
+        local dns="$*"
 
-	local tmp_set="${name}${TMP_SUFFIX}"
-	ipset list "${tmp_set}" > /dev/null 2>&1
-	if [ $? -eq 0 ]; then
-		flush "${tmp_set}"
-	else
-		create_set "${tmp_set}"
-	fi
+        local tmp_set="${name}${TMP_SUFFIX}"
+        ipset list "${tmp_set}" > /dev/null 2>&1
+        if [ $? -eq 0 ]; then
+                flush "${tmp_set}"
+        else
+                create_set "${tmp_set}"
+        fi
 
-	local iplist=$(lookup_ip4 ${dns})
+        for d in ${dns}
+        do
+                local iplist=$(lookup_ip4 ${d})
 
-	# only create a new set and swap if DNS found some results
-	if [ "${#iplist}" -ge 7 ]; then
-		add_to_set "${tmp_set}" ${iplist}
-		swap "${name}"
-	fi
+                # only add to the new set if DNS found some results
+                if [ "${#iplist}" -ge 7 ]; then
+                        add_to_set "${tmp_set}" ${iplist}
+                fi
+        done
+        local size=$(ipset list ${tmp_set} | awk '/Number of entries/ {print $4}')
+	# if the new set isn't empty, swap to make it active
+        if [ ${size} -gt 0 ]; then
+                swap "${name}"
+        fi
 }
-
 swap() {
 	local name=$1
 	local tmp_set="${name}${TMP_SUFFIX}"
@@ -62,11 +69,15 @@ flush() {
 
 update() {
 	# MEROSS
-	replace meross mqtt-eu-3.meross.com.
+        replace meross \
+                mqtt-eu-1.meross.com. \
+                mqtt-eu-2.meross.com. \
+                mqtt-eu-3.meross.com. \
+                mqtt-eu-4.meross.com. \
+                mqtt-eu-5.meross.com.
 
 	# Google DNS
 	replace google-dns dns.google.
-
 
 	# Save Sets
 	ipset save > /etc/iptables/ipsets
