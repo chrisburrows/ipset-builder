@@ -74,7 +74,8 @@ update() {
                 mqtt-eu-2.meross.com. \
                 mqtt-eu-3.meross.com. \
                 mqtt-eu-4.meross.com. \
-                mqtt-eu-5.meross.com.
+                mqtt-eu-5.meross.com. \
+                bucket-meross-static.meross.com \
 
 	# Google DNS
 	replace google-dns dns.google.
